@@ -28,6 +28,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Adresse du site (site.config.json) : GitHub Pages ou domaine personnalisé
+      - run: node scripts/site.mjs env >> "$GITHUB_ENV"
       - run: npx tsc --noEmit
       - run: npx expo lint
       - run: npx expo export --platform web --output-dir dist
@@ -36,9 +38,10 @@ jobs:
       - name: Dernières images des webcams Skaping
         run: node scripts/fetch-webcams.mjs dist/webcams.json
       - name: Bulletins des stations (Skiinfo)
-        run: node scripts/fetch-resorts.mjs dist/resorts.json https://nukifa.github.io/WinterArc/resorts.json
+        run: node scripts/fetch-resorts.mjs dist/resorts.json "$SITE_URL/resorts.json"
       # Routage côté client : GitHub Pages sert 404.html pour les URLs inconnues
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
+      - run: node scripts/site.mjs finalize dist
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

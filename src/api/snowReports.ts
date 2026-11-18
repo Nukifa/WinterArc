@@ -1,3 +1,4 @@
+import { SITE_URL } from '@/config';
 import type { Station } from '@/data/stations';
 
 /**
@@ -5,7 +6,7 @@ import type { Station } from '@/data/stations';
  * Le fichier est généré par scripts/fetch-snow-reports.mjs dans GitHub Actions
  * et publié avec la version web sur GitHub Pages.
  */
-export const SNOW_REPORTS_URL = 'https://nukifa.github.io/WinterArc/snow-reports.json';
+export const SNOW_REPORTS_URL = `${SITE_URL}/snow-reports.json`;
 
 /** Au-delà de cet âge, un relevé n'est plus considéré comme "actuel". */
 export const MAX_REPORT_AGE_DAYS = 3;

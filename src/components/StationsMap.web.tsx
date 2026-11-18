@@ -5,6 +5,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { LayersControl, MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 
+import { BASE_PATH } from '@/config';
 import { GRENOBLE } from '@/data/stations';
 
 import type { MapStation } from './StationsMap.types';
@@ -26,8 +27,8 @@ if (typeof document !== 'undefined' && !document.getElementById('neve-map-css'))
     .neve-popup button{margin-top:8px;width:100%;padding:8px;border:0;border-radius:8px;background:#1E6FD9;
       color:#fff;font-weight:700;cursor:pointer}
     .leaflet-container{background:var(--c-bg);font-family:system-ui,-apple-system,sans-serif}
-    .leaflet-control-layers-toggle{background-image:url(/WinterArc/leaflet/layers.png)}
-    .leaflet-retina .leaflet-control-layers-toggle{background-image:url(/WinterArc/leaflet/layers-2x.png)}
+    .leaflet-control-layers-toggle{background-image:url(${BASE_PATH}/leaflet/layers.png)}
+    .leaflet-retina .leaflet-control-layers-toggle{background-image:url(${BASE_PATH}/leaflet/layers-2x.png)}
     @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) ${darkTiles}}
     :root[data-theme="dark"] ${darkTiles}
   `;

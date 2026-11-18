@@ -26,9 +26,6 @@
     "plugins": [
       "expo-router"
     ],
-    "scheme": "winterarc",
-    "experiments": {
-      "baseUrl": "/WinterArc"
-    }
+    "scheme": "winterarc"
   }
 }

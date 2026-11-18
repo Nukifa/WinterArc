@@ -1,10 +1,11 @@
+import { SITE_URL } from '@/config';
 import type { Station } from '@/data/stations';
 
 /**
  * Index des dernières images des webcams Skaping, généré par scripts/fetch-webcams.mjs
  * dans GitHub Actions et publié avec le site.
  */
-export const WEBCAMS_URL = 'https://nukifa.github.io/WinterArc/webcams.json';
+export const WEBCAMS_URL = `${SITE_URL}/webcams.json`;
 
 /** En dessous de cet âge, l'image est considérée comme "en direct". */
 export const LIVE_MAX_AGE_HOURS = 6;

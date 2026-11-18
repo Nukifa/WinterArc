@@ -74,6 +74,21 @@ publie sur Skiinfo. `scripts/fetch-resorts.mjs` lit la page `bulletin-neige` de 
 ajouter une webcam, chercher son chemin dans https://www.skaping.com/sitemap.players.xml. Les images
 restent hébergées par Skaping ; la vue 360° est leur lecteur officiel, intégré tel quel.
 
+## Domaine personnalisé (enneigement.fr)
+
+L'adresse du site est définie dans `site.config.json` (`scripts/site.mjs` l'applique au build : chemin
+de base, manifest, service worker, fichier `CNAME`, URL des données).
+
+1. Chez le bureau d'enregistrement, zone DNS de `enneigement.fr` :
+   - 4 enregistrements **A** sur `@` : `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`
+   - 4 enregistrements **AAAA** sur `@` : `2606:50c0:8000::153`, `2606:50c0:8001::153`, `2606:50c0:8002::153`, `2606:50c0:8003::153`
+   - 1 enregistrement **CNAME** `www` → `nukifa.github.io.`
+2. Dans `site.config.json`, mettre `"domain": "enneigement.fr"` et pousser.
+3. GitHub → Settings → Pages → Custom domain : `enneigement.fr`, puis cocher « Enforce HTTPS »
+   une fois le certificat émis (quelques minutes à 24 h).
+
+L'ancienne adresse https://nukifa.github.io/WinterArc/ redirige alors vers le domaine.
+
 ## Développement local
 
 ```bash

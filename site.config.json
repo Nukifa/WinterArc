@@ -1,0 +1,5 @@
+{
+  "//": "Adresse publique du site. Mettre \"domain\" à \"enneigement.fr\" une fois le domaine acheté et ses DNS pointés vers GitHub Pages.",
+  "domain": null,
+  "githubPagesUrl": "https://nukifa.github.io/WinterArc"
+}

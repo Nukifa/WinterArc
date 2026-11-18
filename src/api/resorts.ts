@@ -1,10 +1,11 @@
+import { SITE_URL } from '@/config';
 import type { Station } from '@/data/stations';
 
 /**
  * Bulletins déclarés par les stations (statut, remontées / pistes ouvertes, neige),
  * repris de Skiinfo / OnTheSnow par scripts/fetch-resorts.mjs dans GitHub Actions.
  */
-export const RESORTS_URL = 'https://nukifa.github.io/WinterArc/resorts.json';
+export const RESORTS_URL = `${SITE_URL}/resorts.json`;
 
 export type ResortStatus = 'open' | 'closed' | 'temporarilyClosed' | 'permanentlyClosed' | 'unknown';
 

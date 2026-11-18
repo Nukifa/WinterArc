@@ -38,7 +38,7 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         // Navigation hors ligne vers une autre page : renvoyer l'app
         if (req.mode === 'navigate') {
-          const shell = await caches.match('/WinterArc/');
+          const shell = await caches.match('%BASE_PATH%/');
           if (shell) return shell;
         }
         return Response.error();
