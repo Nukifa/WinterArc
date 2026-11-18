@@ -40,7 +40,7 @@ export default function WebcamScreen() {
       />
       {failed ? (
         <View style={styles.center}>
-          <Text style={styles.msg}>Impossible d'afficher la page webcam dans l'app.</Text>
+          <Text style={styles.msg}>Impossible d’afficher la page webcam dans l’app.</Text>
           <Pressable style={styles.button} onPress={openExternal}>
             <Text style={styles.buttonText}>Ouvrir dans le navigateur</Text>
           </Pressable>

@@ -1,12 +1,16 @@
-# ❄️ WinterArc
+# ❄️ Névé
 
-Application mobile (Expo / React Native) pour consulter l'enneigement des stations des Alpes,
-en priorité autour de Grenoble.
+Application mobile (Expo / React Native) pour consulter l'enneigement des stations des Alpes françaises,
+en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
 
 ## Fonctionnalités (v0)
 
-- **Liste des stations** : filtre « Autour de Grenoble » (< 65 km) ou « Toutes les Alpes »,
-  tri par distance, neige à venir ou enneigement.
+- **40 stations** en Isère, Savoie, Haute-Savoie et Hautes-Alpes.
+- **Filtres** : favoris, autour de Grenoble (< 65 km), par département ou toutes ; puis par massif
+  (Belledonne, Vercors, Chartreuse, Oisans, Champsaur, Queyras…). Tri par distance, neige à venir ou
+  enneigement.
+- **Favoris** : étoile ☆ sur chaque station, enregistrés sur l'appareil. L'app s'ouvre directement sur
+  les favoris quand il y en a.
 - **Enneigement estimé** au sommet et en bas du domaine, et neige fraîche des dernières 72 h.
 - **Prévisions de chute de neige sur 5 jours** (sommet et bas), avec températures, isotherme 0 °C
   et un indice de fiabilité : J0–J1 fiable, J2–J3 assez fiable, J4 simple tendance.

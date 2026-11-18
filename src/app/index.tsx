@@ -1,42 +1,89 @@
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
 import { totalSnowfall, type StationConditions } from '@/api/openMeteo';
 import { currentReport, type LatestReport } from '@/api/snowReports';
 import { Chip } from '@/components/Chip';
 import { DataFreshness } from '@/components/DataFreshness';
 import { SnowBars } from '@/components/SnowBars';
+import { StarButton } from '@/components/StarButton';
 import { useConditions } from '@/data/ConditionsContext';
-import { distanceFromGrenoble, GRENOBLE_RADIUS_KM, STATIONS, type Station } from '@/data/stations';
+import { useFavorites } from '@/data/FavoritesContext';
+import {
+  DEPARTEMENTS,
+  distanceFromGrenoble,
+  GRENOBLE_RADIUS_KM,
+  STATIONS,
+  type Departement,
+  type Station,
+} from '@/data/stations';
 import { colors, radius } from '@/theme';
 import { cm, shortDate } from '@/utils/format';
 
-type Zone = 'grenoble' | 'all';
+type Zone = 'favorites' | 'grenoble' | 'all' | Departement;
 type Sort = 'distance' | 'forecast' | 'depth';
+
+const ZONES: { key: Zone; label: string }[] = [
+  { key: 'favorites', label: '⭐ Favoris' },
+  { key: 'grenoble', label: '📍 Autour de Grenoble' },
+  ...DEPARTEMENTS.map((d) => ({ key: d as Zone, label: d })),
+  { key: 'all', label: '🏔️ Toutes' },
+];
+
+function inZone(s: Station, zone: Zone, favorites: string[]): boolean {
+  if (zone === 'favorites') return favorites.includes(s.id);
+  if (zone === 'grenoble') return distanceFromGrenoble(s) <= GRENOBLE_RADIUS_KM;
+  if (zone === 'all') return true;
+  return s.departement === zone;
+}
 
 export default function StationsScreen() {
   const { data, reports, loading, error, refresh } = useConditions();
-  const [zone, setZone] = useState<Zone>('grenoble');
+  const { favorites, ready } = useFavorites();
+  // Au démarrage, l'app s'ouvre sur les favoris s'il y en a, sinon autour de Grenoble
+  const [chosenZone, setZone] = useState<Zone | null>(null);
+  const zone: Zone = chosenZone ?? (ready && favorites.length > 0 ? 'favorites' : 'grenoble');
+  const [massif, setMassif] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('distance');
 
+
+  const zoneStations = useMemo(() => STATIONS.filter((s) => inZone(s, zone, favorites)), [zone, favorites]);
+
+  // Massifs disponibles dans la zone choisie, du plus proche au plus loin de Grenoble
+  const massifs = useMemo(() => {
+    const best = new Map<string, number>();
+    zoneStations.forEach((s) => {
+      const d = distanceFromGrenoble(s);
+      best.set(s.massif, Math.min(best.get(s.massif) ?? Infinity, d));
+    });
+    return [...best.entries()].sort((a, b) => a[1] - b[1]).map(([m]) => m);
+  }, [zoneStations]);
+
+  const activeMassif = massif && massifs.includes(massif) ? massif : null;
+
   const list = useMemo(() => {
-    const withDist = STATIONS.map((s) => ({
-      station: s,
-      dist: distanceFromGrenoble(s),
-      report: currentReport(s, reports),
-    }));
-    const depth = (x: (typeof withDist)[number]) =>
-      x.report?.obs.snowDepthCm ?? data[x.station.id]?.top.snowDepthCm ?? -1;
-    const filtered = zone === 'grenoble' ? withDist.filter((x) => x.dist <= GRENOBLE_RADIUS_KM) : withDist;
-    return [...filtered].sort((a, b) => {
+    const items = zoneStations
+      .filter((s) => !activeMassif || s.massif === activeMassif)
+      .map((s) => ({ station: s, dist: distanceFromGrenoble(s), report: currentReport(s, reports) }));
+    const depth = (x: (typeof items)[number]) => x.report?.obs.snowDepthCm ?? data[x.station.id]?.top.snowDepthCm ?? -1;
+    return items.sort((a, b) => {
       if (sort === 'distance') return a.dist - b.dist;
       const ca = data[a.station.id];
       const cb = data[b.station.id];
       if (sort === 'forecast') return (cb ? totalSnowfall(cb.top.days) : -1) - (ca ? totalSnowfall(ca.top.days) : -1);
       return depth(b) - depth(a);
     });
-  }, [zone, sort, data, reports]);
+  }, [zoneStations, activeMassif, sort, data, reports]);
 
   return (
     <FlatList
@@ -46,16 +93,34 @@ export default function StationsScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh(true)} />}
       ListHeaderComponent={
         <View style={styles.header}>
-          <View style={styles.chips}>
-            <Chip label="📍 Autour de Grenoble" active={zone === 'grenoble'} onPress={() => setZone('grenoble')} />
-            <Chip label="🏔️ Toutes les Alpes" active={zone === 'all'} onPress={() => setZone('all')} />
-          </View>
-          <View style={styles.chips}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+            {ZONES.map((z) => (
+              <Chip
+                key={z.key}
+                label={z.key === 'favorites' && favorites.length ? `${z.label} (${favorites.length})` : z.label}
+                active={zone === z.key}
+                onPress={() => {
+                  setZone(z.key);
+                  setMassif(null);
+                }}
+              />
+            ))}
+          </ScrollView>
+          {massifs.length > 1 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+              <Text style={styles.sortLabel}>Massif :</Text>
+              <Chip label="Tous" active={!activeMassif} onPress={() => setMassif(null)} small />
+              {massifs.map((m) => (
+                <Chip key={m} label={m} active={activeMassif === m} onPress={() => setMassif(m)} small />
+              ))}
+            </ScrollView>
+          ) : null}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             <Text style={styles.sortLabel}>Trier :</Text>
-            <Chip label="Distance" active={sort === 'distance'} onPress={() => setSort('distance')} />
-            <Chip label="Neige à venir" active={sort === 'forecast'} onPress={() => setSort('forecast')} />
-            <Chip label="Enneigement" active={sort === 'depth'} onPress={() => setSort('depth')} />
-          </View>
+            <Chip label="Distance" active={sort === 'distance'} onPress={() => setSort('distance')} small />
+            <Chip label="Neige à venir" active={sort === 'forecast'} onPress={() => setSort('forecast')} small />
+            <Chip label="Enneigement" active={sort === 'depth'} onPress={() => setSort('depth')} small />
+          </ScrollView>
           {error ? (
             <Pressable onPress={() => refresh(true)} style={styles.error}>
               <Text style={styles.errorText}>⚠️ {error} — toucher pour réessayer</Text>
@@ -63,6 +128,17 @@ export default function StationsScreen() {
           ) : null}
           <DataFreshness />
         </View>
+      }
+      ListEmptyComponent={
+        zone === 'favorites' ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Aucune station favorite</Text>
+            <Text style={styles.emptyText}>
+              Touchez l’étoile ☆ d’une station pour la retrouver ici. L’app s’ouvrira directement sur vos favoris.
+            </Text>
+            <Chip label="Voir les stations autour de Grenoble" active onPress={() => setZone('grenoble')} />
+          </View>
+        ) : undefined
       }
       renderItem={({ item }) => (
         <StationCard
@@ -98,9 +174,12 @@ function StationCard({
 }) {
   const total = conditions ? totalSnowfall(conditions.top.days) : null;
   return (
-    <Link href={{ pathname: '/station/[id]', params: { id: station.id } }} asChild>
-      <Pressable style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}>
+    <Pressable
+      onPress={() => router.push({ pathname: '/station/[id]', params: { id: station.id } })}
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
+    >
         <View style={styles.cardTop}>
+          <StarButton stationId={station.id} />
           <View style={{ flex: 1 }}>
             <Text style={styles.name}>{station.name}</Text>
             <Text style={styles.meta}>
@@ -139,15 +218,17 @@ function StationCard({
         ) : (
           <Text style={[styles.meta, { marginTop: 10 }]}>Données indisponibles</Text>
         )}
-      </Pressable>
-    </Link>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   header: { gap: 10, marginBottom: 4 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
+  chips: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingRight: 16 },
+  empty: { alignItems: 'center', gap: 10, paddingVertical: 24, paddingHorizontal: 12 },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
+  emptyText: { fontSize: 13, color: colors.muted, textAlign: 'center' },
   sortLabel: { color: colors.muted, fontSize: 13 },
   error: { backgroundColor: '#FDECEA', padding: 10, borderRadius: 10 },
   errorText: { color: colors.danger, fontSize: 13 },

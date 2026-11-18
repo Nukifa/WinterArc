@@ -28,6 +28,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npx expo lint
       - run: npx expo export --platform web --output-dir dist
       - name: Relevés de neige Météo-France
         run: node scripts/fetch-snow-reports.mjs dist/snow-reports.json

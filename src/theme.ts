@@ -11,6 +11,7 @@ export const colors = {
   medium: '#D98E04',
   low: '#9AA5B5',
   danger: '#C0392B',
+  star: '#F2A900',
 };
 
 export const radius = 14;

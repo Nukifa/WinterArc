@@ -55,7 +55,8 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    refresh();
+    // Chargement initial, différé pour ne pas modifier l'état pendant l'effet
+    Promise.resolve().then(() => refresh());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
