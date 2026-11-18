@@ -31,3 +31,14 @@ export function shortDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+
+/** "aujourd'hui à 13h21", "hier à 07h17" ou "16 nov. à 08h00" (heure locale) */
+export function relativeDateTime(input: number | string): string {
+  const d = new Date(input);
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 86400_000);
+  const sameDay = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  const day = sameDay(d, today) ? "aujourd'hui" : sameDay(d, yesterday) ? 'hier' : `le ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+  return `${day} à ${formatTime(d.getTime())}`;
+}

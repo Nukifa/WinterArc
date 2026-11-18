@@ -5,17 +5,18 @@ import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Tex
 import { totalSnowfall, type StationConditions } from '@/api/openMeteo';
 import { currentReport, type LatestReport } from '@/api/snowReports';
 import { Chip } from '@/components/Chip';
+import { DataFreshness } from '@/components/DataFreshness';
 import { SnowBars } from '@/components/SnowBars';
 import { useConditions } from '@/data/ConditionsContext';
 import { distanceFromGrenoble, GRENOBLE_RADIUS_KM, STATIONS, type Station } from '@/data/stations';
 import { colors, radius } from '@/theme';
-import { cm, formatTime, shortDate } from '@/utils/format';
+import { cm, shortDate } from '@/utils/format';
 
 type Zone = 'grenoble' | 'all';
 type Sort = 'distance' | 'forecast' | 'depth';
 
 export default function StationsScreen() {
-  const { data, reports, loading, error, updatedAt, refresh } = useConditions();
+  const { data, reports, loading, error, refresh } = useConditions();
   const [zone, setZone] = useState<Zone>('grenoble');
   const [sort, setSort] = useState<Sort>('distance');
 
@@ -60,7 +61,7 @@ export default function StationsScreen() {
               <Text style={styles.errorText}>⚠️ {error} — toucher pour réessayer</Text>
             </Pressable>
           ) : null}
-          {updatedAt ? <Text style={styles.updated}>Mis à jour à {formatTime(updatedAt)} · Open-Meteo</Text> : null}
+          <DataFreshness />
         </View>
       }
       renderItem={({ item }) => (
@@ -148,7 +149,6 @@ const styles = StyleSheet.create({
   header: { gap: 10, marginBottom: 4 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   sortLabel: { color: colors.muted, fontSize: 13 },
-  updated: { color: colors.muted, fontSize: 12 },
   error: { backgroundColor: '#FDECEA', padding: 10, borderRadius: 10 },
   errorText: { color: colors.danger, fontSize: 13 },
   card: {

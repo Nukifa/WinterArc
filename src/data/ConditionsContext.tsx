@@ -14,6 +14,8 @@ type State = {
   loading: boolean;
   error: string | null;
   updatedAt: number | null;
+  /** Heure de la dernière récupération réussie des prévisions Open-Meteo */
+  forecastAt: number | null;
   refresh: (force?: boolean) => Promise<void>;
 };
 
@@ -25,6 +27,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  const [forecastAt, setForecastAt] = useState<number | null>(null);
   const inFlight = useRef(false);
 
   const refresh = useCallback(
@@ -35,7 +38,10 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       setError(null);
       const [forecast, measured] = await Promise.allSettled([fetchConditions(STATIONS), fetchSnowReports()]);
-      if (forecast.status === 'fulfilled') setData(forecast.value);
+      if (forecast.status === 'fulfilled') {
+        setData(forecast.value);
+        setForecastAt(Date.now());
+      }
       if (measured.status === 'fulfilled') setReports(measured.value);
       const errors = [forecast, measured]
         .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
@@ -54,7 +60,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ConditionsContext.Provider value={{ data, reports, loading, error, updatedAt, refresh }}>
+    <ConditionsContext.Provider value={{ data, reports, loading, error, updatedAt, forecastAt, refresh }}>
       {children}
     </ConditionsContext.Provider>
   );

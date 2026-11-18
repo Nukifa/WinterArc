@@ -3,6 +3,7 @@ import { Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, T
 
 import { reliability, totalSnowfall, weatherInfo, type AltitudeConditions } from '@/api/openMeteo';
 import { formatPostName, latestReports, type LatestReport } from '@/api/snowReports';
+import { DataFreshness } from '@/components/DataFreshness';
 import { useConditions } from '@/data/ConditionsContext';
 import { distanceFromGrenoble, getStation } from '@/data/stations';
 import { colors, radius } from '@/theme';
@@ -129,6 +130,9 @@ export default function StationScreen() {
         <Text style={styles.linkText}>🌐 Site officiel de la station ↗</Text>
       </Pressable>
 
+      <View style={{ marginTop: 20 }}>
+        <DataFreshness />
+      </View>
       <Text style={styles.note}>
         Relevés mesurés : réseau nivo-météorologique Météo-France (data.gouv.fr, licence Etalab 2.0), mis à jour une
         fois par jour. Estimations et prévisions : Open-Meteo (modèles Météo-France AROME / ARPEGE), recalculées à
