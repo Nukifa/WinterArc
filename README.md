@@ -21,6 +21,13 @@ en priorité autour de Grenoble.
 - Stations, coordonnées, altitudes et liens webcams : `src/data/stations.ts`. Les liens webcams
   peuvent changer d'une saison à l'autre : vérifie-les et complète-les si besoin.
 
+## Version web (GitHub Pages)
+
+À chaque push, le workflow `.github/workflows/deploy-web.yml` publie la version web sur
+<https://nukifa.github.io/WinterArc/>.
+
+À faire une seule fois : **Settings → Pages → Build and deployment → Source : « GitHub Actions »**.
+
 ## Lancer l'app
 
 ```bash
