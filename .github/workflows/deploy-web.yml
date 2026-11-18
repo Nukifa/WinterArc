@@ -35,6 +35,8 @@ jobs:
         run: node scripts/fetch-snow-reports.mjs dist/snow-reports.json
       - name: Dernières images des webcams Skaping
         run: node scripts/fetch-webcams.mjs dist/webcams.json
+      - name: Bulletins des stations (Skiinfo)
+        run: node scripts/fetch-resorts.mjs dist/resorts.json https://nukifa.github.io/WinterArc/resorts.json
       # Routage côté client : GitHub Pages sert 404.html pour les URLs inconnues
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3

@@ -1,23 +1,26 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { reliability, totalSnowfall, weatherInfo, type AltitudeConditions } from '@/api/openMeteo';
+import { STATUS_LABEL, stationResort, upcomingOpening } from '@/api/resorts';
 import { formatPostName, latestReports, type LatestReport } from '@/api/snowReports';
 import { isLive, stationWebcams } from '@/api/webcams';
 import { DataFreshness } from '@/components/DataFreshness';
+import { ResortBulletin } from '@/components/ResortBulletin';
+import { SnowTimeline } from '@/components/SnowTimeline';
 import { StarButton } from '@/components/StarButton';
 import { WebcamPanorama } from '@/components/WebcamPanorama';
 import { useConditions } from '@/data/ConditionsContext';
-import { distanceFromGrenoble, getStation } from '@/data/stations';
+import { distanceFromGrenoble, distanceKm, getStation, STATIONS } from '@/data/stations';
 import { colors, radius } from '@/theme';
-import { cm, longDay, shortDate } from '@/utils/format';
+import { cm, dayMonth, longDay, shortDate } from '@/utils/format';
 import { MAX_READING_WIDTH } from '@/utils/layout';
 
 export default function StationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const station = getStation(String(id));
-  const { data, reports, webcams, loading, refresh } = useConditions();
+  const { data, reports, webcams, resorts, loading, refresh } = useConditions();
   const [showAllCams, setShowAllCams] = useState(false);
 
   if (!station) {
@@ -30,6 +33,11 @@ export default function StationScreen() {
   const c = data[station.id];
   const measured = latestReports(station, reports);
   const cams = stationWebcams(station, webcams);
+  const resort = stationResort(station, resorts);
+  const nearby = STATIONS.filter((s) => s.id !== station.id)
+    .map((s) => ({ s, d: distanceKm(station, s) }))
+    .sort((a, b) => a.d - b.d)
+    .slice(0, 4);
 
   return (
     <ScrollView
@@ -66,6 +74,14 @@ export default function StationScreen() {
         </Pressable>
       ))}
 
+      {/* Bulletin de la station */}
+      <Text style={styles.section}>Ouverture & domaine skiable</Text>
+      {resort ? (
+        <ResortBulletin resort={resort} />
+      ) : (
+        <Text style={styles.meta}>{resorts ? 'Bulletin de la station indisponible.' : loading ? 'Chargement…' : ''}</Text>
+      )}
+
       {/* Relevés mesurés */}
       <Text style={styles.section}>Relevés mesurés · Météo-France</Text>
       {measured.length > 0 ? (
@@ -92,6 +108,16 @@ export default function StationScreen() {
       ) : (
         <Text style={styles.meta}>{loading ? 'Chargement…' : 'Données indisponibles'}</Text>
       )}
+
+      {/* Chutes de neige récentes et à venir */}
+      {c ? (
+        <>
+          <Text style={styles.section}>Chutes de neige au sommet · passé et prévisions</Text>
+          <View style={[styles.card, { padding: 12 }]}>
+            <SnowTimeline cond={c.top} />
+          </View>
+        </>
+      ) : null}
 
       {/* Prévisions */}
       {c ? (
@@ -140,6 +166,33 @@ export default function StationScreen() {
           </Text>
         </>
       ) : null}
+
+      {/* Stations les plus proches */}
+      <Text style={styles.section}>Stations les plus proches</Text>
+      <View style={styles.card}>
+        {nearby.map(({ s, d }, i) => {
+          const nc = data[s.id];
+          const nr = stationResort(s, resorts);
+          const opening = nr ? upcomingOpening(nr) : null;
+          return (
+            <Pressable
+              key={s.id}
+              onPress={() => router.push({ pathname: '/station/[id]', params: { id: s.id } })}
+              style={({ pressed }) => [styles.nearRow, i > 0 && styles.fBorder, pressed && { opacity: 0.7 }]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={styles.dayText}>{s.name}</Text>
+                <Text style={styles.small}>
+                  {Math.round(d)} km ·{' '}
+                  {nr ? (nr.status === 'open' ? 'Ouverte' : opening ? `ouverture ${dayMonth(opening)}` : STATUS_LABEL[nr.status]) : s.massif}
+                </Text>
+              </View>
+              {nc ? <Text style={styles.snowNum}>+{totalSnowfall(nc.top.days)} cm</Text> : null}
+              <Text style={styles.chevron}>›</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
       <Pressable style={styles.linkButton} onPress={() => Linking.openURL(station.website)}>
         <Text style={styles.linkText}>🌐 Site officiel de la station ↗</Text>
@@ -235,6 +288,8 @@ const styles = StyleSheet.create({
   },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   linkButton: { paddingVertical: 8 },
+  nearRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  chevron: { fontSize: 20, color: colors.low },
   moreButton: { paddingVertical: 4, marginBottom: 4 },
   linkText: { color: colors.primary, fontWeight: '600' },
 });

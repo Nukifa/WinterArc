@@ -12,7 +12,8 @@ import {
   View,
 } from 'react-native';
 
-import { totalSnowfall, type StationConditions } from '@/api/openMeteo';
+import { nextDaysSnowfall, totalSnowfall, type StationConditions } from '@/api/openMeteo';
+import { openTotal, STATUS_LABEL, stationResort, upcomingOpening, type ResortReport } from '@/api/resorts';
 import { currentReport, type LatestReport } from '@/api/snowReports';
 import { isLive, stationWebcams, type Webcam } from '@/api/webcams';
 import { Chip } from '@/components/Chip';
@@ -30,11 +31,11 @@ import {
   type Station,
 } from '@/data/stations';
 import { colors, radius } from '@/theme';
-import { cm, relativeAge, shortDate } from '@/utils/format';
+import { cm, dayMonth, relativeAge, shortDate } from '@/utils/format';
 import { MAX_CONTENT_WIDTH, useColumns } from '@/utils/layout';
 
 type Zone = 'favorites' | 'grenoble' | 'all' | Departement;
-type Sort = 'distance' | 'forecast' | 'depth';
+type Sort = 'distance' | 'forecast' | 'depth' | 'opening';
 
 const ZONES: { key: Zone; label: string }[] = [
   { key: 'favorites', label: '⭐ Favoris' },
@@ -51,15 +52,15 @@ function inZone(s: Station, zone: Zone, favorites: string[]): boolean {
 }
 
 export default function StationsScreen() {
-  const { data, reports, webcams, loading, error, refresh } = useConditions();
+  const { data, reports, webcams, resorts, loading, error, refresh } = useConditions();
   const { favorites, ready } = useFavorites();
   // Au démarrage, l'app s'ouvre sur les favoris s'il y en a, sinon autour de Grenoble
   const [chosenZone, setZone] = useState<Zone | null>(null);
   const zone: Zone = chosenZone ?? (ready && favorites.length > 0 ? 'favorites' : 'grenoble');
   const [massif, setMassif] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('distance');
+  const [onlyOpen, setOnlyOpen] = useState(false);
   const columns = useColumns();
-
 
   const zoneStations = useMemo(() => STATIONS.filter((s) => inZone(s, zone, favorites)), [zone, favorites]);
 
@@ -83,16 +84,19 @@ export default function StationsScreen() {
         dist: distanceFromGrenoble(s),
         report: currentReport(s, reports),
         cam: stationWebcams(s, webcams).find(isLive),
-      }));
+        resort: stationResort(s, resorts),
+      }))
+      .filter((x) => !onlyOpen || x.resort?.status === 'open');
     const depth = (x: (typeof items)[number]) => x.report?.obs.snowDepthCm ?? data[x.station.id]?.top.snowDepthCm ?? -1;
     return items.sort((a, b) => {
       if (sort === 'distance') return a.dist - b.dist;
+      if (sort === 'opening') return openingKey(a.resort).localeCompare(openingKey(b.resort)) || a.dist - b.dist;
       const ca = data[a.station.id];
       const cb = data[b.station.id];
       if (sort === 'forecast') return (cb ? totalSnowfall(cb.top.days) : -1) - (ca ? totalSnowfall(ca.top.days) : -1);
       return depth(b) - depth(a);
     });
-  }, [zoneStations, activeMassif, sort, data, reports, webcams]);
+  }, [zoneStations, activeMassif, sort, onlyOpen, data, reports, webcams, resorts]);
 
   // Sur plusieurs colonnes, on complète la dernière ligne pour garder des cartes de même largeur
   const rows: (typeof list[number] | null)[] = [...list];
@@ -136,6 +140,9 @@ export default function StationsScreen() {
             <Chip label="Distance" active={sort === 'distance'} onPress={() => setSort('distance')} small />
             <Chip label="Neige à venir" active={sort === 'forecast'} onPress={() => setSort('forecast')} small />
             <Chip label="Enneigement" active={sort === 'depth'} onPress={() => setSort('depth')} small />
+            <Chip label="Date d’ouverture" active={sort === 'opening'} onPress={() => setSort('opening')} small />
+            <Text style={styles.sortLabel}>·</Text>
+            <Chip label="🟢 Ouvertes uniquement" active={onlyOpen} onPress={() => setOnlyOpen((v) => !v)} small />
           </ScrollView>
           {error ? (
             <Pressable onPress={() => refresh(true)} style={styles.error}>
@@ -146,7 +153,22 @@ export default function StationsScreen() {
         </View>
       }
       ListEmptyComponent={
-        zone === 'favorites' ? (
+        onlyOpen && zoneStations.length > 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>Aucune station ouverte pour le moment</Text>
+            <Text style={styles.emptyText}>
+              Triez par « Date d’ouverture » pour voir les prochaines ouvertures prévues.
+            </Text>
+            <Chip
+              label="Voir les prochaines ouvertures"
+              active
+              onPress={() => {
+                setOnlyOpen(false);
+                setSort('opening');
+              }}
+            />
+          </View>
+        ) : zone === 'favorites' ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>Aucune station favorite</Text>
             <Text style={styles.emptyText}>
@@ -165,6 +187,7 @@ export default function StationsScreen() {
               conditions={data[item.station.id]}
               report={item.report}
               cam={item.cam}
+              resort={item.resort}
               loading={loading}
             />
           </View>
@@ -188,6 +211,7 @@ function StationCard({
   conditions,
   report,
   cam,
+  resort,
   loading,
 }: {
   station: Station;
@@ -195,6 +219,7 @@ function StationCard({
   conditions?: StationConditions;
   report: LatestReport | null;
   cam?: Webcam;
+  resort: ResortReport | null;
   loading: boolean;
 }) {
   const total = conditions ? totalSnowfall(conditions.top.days) : null;
@@ -216,6 +241,7 @@ function StationCard({
             <Text style={styles.meta}>
               {station.massif} · {Math.round(dist)} km · {station.altBase}–{station.altTop} m
             </Text>
+            {resort ? <ResortStatusLine resort={resort} /> : null}
           </View>
           {total !== null && total > 0 ? (
             <View style={styles.badge}>
@@ -244,12 +270,43 @@ function StationCard({
             )}
             {conditions ? <SnowBars days={conditions.top.days} /> : null}
           </View>
+        ) : null}
+        {conditions ? (
+          <Text style={styles.threeDays}>
+            Neige 3 derniers jours : <Text style={styles.threeDaysValue}>{conditions.top.snowfallPast72hCm} cm</Text> ·
+            Prévue 3 j : <Text style={styles.threeDaysValue}>{nextDaysSnowfall(conditions.top.days, 3)} cm</Text>
+          </Text>
         ) : loading ? (
           <ActivityIndicator style={{ marginTop: 12 }} color={colors.primary} />
         ) : (
           <Text style={[styles.meta, { marginTop: 10 }]}>Données indisponibles</Text>
         )}
     </Pressable>
+  );
+}
+
+/** Clé de tri "date d'ouverture" : stations ouvertes d'abord, puis ouverture la plus proche. */
+function openingKey(r: ResortReport | null): string {
+  if (!r) return '9';
+  if (r.status === 'open') return '0';
+  return upcomingOpening(r) ?? '8';
+}
+
+function ResortStatusLine({ resort }: { resort: ResortReport }) {
+  if (resort.status === 'open') {
+    const lifts = openTotal(resort.lifts);
+    return (
+      <Text style={[styles.status, styles.statusOpen]}>
+        ● Ouverte{lifts ? ` · ${lifts} remontées` : ''}
+        {resort.runs.open !== null && resort.runs.total ? ` · ${resort.runs.open}/${resort.runs.total} pistes` : ''}
+      </Text>
+    );
+  }
+  const opening = upcomingOpening(resort);
+  return (
+    <Text style={[styles.status, styles.statusClosed]}>
+      {opening ? `Ouverture prévue le ${dayMonth(opening)}` : STATUS_LABEL[resort.status]}
+    </Text>
   );
 }
 
@@ -273,6 +330,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  status: { marginTop: 4, fontSize: 11, fontWeight: '700', alignSelf: 'flex-start', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  statusOpen: { color: colors.high, backgroundColor: '#E2F5EA' },
+  statusClosed: { color: colors.muted, backgroundColor: '#EEF1F5' },
+  threeDays: { marginTop: 10, fontSize: 11, color: colors.muted },
+  threeDaysValue: { color: colors.text, fontWeight: '700' },
   banner: { marginTop: -14, marginHorizontal: -14, marginBottom: 12, height: 74, backgroundColor: colors.bg },
   bannerImg: { width: '100%', height: '100%', borderTopLeftRadius: radius, borderTopRightRadius: radius },
   bannerTag: {

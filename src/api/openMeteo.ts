@@ -11,7 +11,8 @@ const BASE_URL = 'https://api.open-meteo.com/v1/forecast';
 
 /** Nombre de jours de prévision : on reste volontairement à courte échéance. */
 export const FORECAST_DAYS = 5;
-const PAST_DAYS = 3;
+/** Jours passés récupérés pour l'historique des chutes de neige. */
+export const PAST_DAYS = 7;
 
 export type DayForecast = {
   date: string; // YYYY-MM-DD
@@ -32,6 +33,8 @@ export type AltitudeConditions = {
   snowfallPast72hCm: number;
   /** Aujourd'hui + jours suivants */
   days: DayForecast[];
+  /** Chutes de neige des PAST_DAYS jours précédents (du plus ancien au plus récent) */
+  history: { date: string; snowfallCm: number }[];
 };
 
 export type StationConditions = {
@@ -112,8 +115,12 @@ function parse(r: OpenMeteoResponse, altitude: number): AltitudeConditions {
   });
 
   const days: DayForecast[] = [];
+  const history: AltitudeConditions['history'] = [];
   r.daily.time.forEach((date, i) => {
-    if (date < todayLocal) return;
+    if (date < todayLocal) {
+      history.push({ date, snowfallCm: Math.round(num(r.daily.snowfall_sum[i]) * 10) / 10 });
+      return;
+    }
     days.push({
       date,
       snowfallCm: Math.round(num(r.daily.snowfall_sum[i]) * 10) / 10,
@@ -130,6 +137,7 @@ function parse(r: OpenMeteoResponse, altitude: number): AltitudeConditions {
     snowDepthCm,
     snowfallPast72hCm: Math.round(past72),
     days,
+    history,
   };
 }
 
@@ -152,6 +160,11 @@ export function reliability(dayOffset: number): { label: string; level: 'high' |
   if (dayOffset <= 1) return { label: 'Fiable', level: 'high' };
   if (dayOffset <= 3) return { label: 'Assez fiable', level: 'medium' };
   return { label: 'Tendance', level: 'low' };
+}
+
+/** Cumul de neige prévu sur les `n` prochains jours (aujourd'hui compris). */
+export function nextDaysSnowfall(days: DayForecast[], n: number): number {
+  return Math.round(days.slice(0, n).reduce((acc, d) => acc + d.snowfallCm, 0));
 }
 
 export function totalSnowfall(days: DayForecast[]): number {

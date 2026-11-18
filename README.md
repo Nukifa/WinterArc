@@ -14,6 +14,11 @@ en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
 - **Enneigement estimé** au sommet et en bas du domaine, et neige fraîche des dernières 72 h.
 - **Prévisions de chute de neige sur 5 jours** (sommet et bas), avec températures, isotherme 0 °C
   et un indice de fiabilité : J0–J1 fiable, J2–J3 assez fiable, J4 simple tendance.
+- **Ouverture et domaine** (bulletin déclaré par la station, via Skiinfo / OnTheSnow) : statut
+  ouverte / fermée, date d'ouverture prévue, remontées et pistes ouvertes, km, pistes par niveau,
+  snowparks, horaires, plan des pistes. Filtre « Ouvertes uniquement » et tri par date d'ouverture.
+- **Chutes de neige** : 7 derniers jours et 5 prochains jours sur un même graphique ; « neige 3 derniers
+  jours / prévue 3 jours » sur chaque carte. Stations les plus proches en bas de la fiche.
 - **Webcams intégrées** (84 webcams Skaping sur 27 stations) : aperçu panoramique sur chaque carte,
   panoramas à faire défiler en haut de la fiche station avec l'heure de la photo, et vue 360°
   interactive de Skaping directement dans l'app. Lien vers la page webcams officielle pour les autres.
@@ -49,6 +54,13 @@ avec Expo / React Native Web. Le même code peut toujours produire une app mobil
 construit le site, récupère les relevés Météo-France et publie le tout sur GitHub Pages
 (Settings → Pages → Source : « GitHub Actions »). Il tourne aussi deux fois par jour pour rafraîchir les
 relevés.
+
+### Bulletins des stations
+
+Les stations saisissent leur bulletin (ouverture, remontées, pistes, neige) chez OnTheSnow, qui le
+publie sur Skiinfo. `scripts/fetch-resorts.mjs` lit la page `bulletin-neige` de chaque station (champ
+`skiinfo` de `src/data/stations.ts`), décode les données embarquées par Next.js et publie
+`resorts.json`. L'index publié est réutilisé s'il a moins de 3 h, pour limiter les requêtes.
 
 ### Webcams
 

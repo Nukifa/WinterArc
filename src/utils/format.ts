@@ -50,3 +50,17 @@ export function relativeAge(iso: string): string {
   if (minutes < 24 * 60) return `il y a ${Math.round(minutes / 60)} h`;
   return `le ${shortDate(iso)}`;
 }
+
+/** "samedi 5 décembre" à partir d'une date "YYYY-MM-DD" */
+export function longDate(iso: string): string {
+  const FULL_DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  const FULL_MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  const d = parseDate(iso.slice(0, 10));
+  return `${FULL_DAYS[d.getDay()]} ${d.getDate()} ${FULL_MONTHS[d.getMonth()]}`;
+}
+
+/** "5 déc." à partir d'une date "YYYY-MM-DD" (sans décalage de fuseau) */
+export function dayMonth(iso: string): string {
+  const d = parseDate(iso.slice(0, 10));
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}

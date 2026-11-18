@@ -6,7 +6,7 @@ import { relativeDateTime } from '@/utils/format';
 
 /** Indique quand les données météo et les relevés ont été actualisés. */
 export function DataFreshness() {
-  const { reports, forecastAt, loading } = useConditions();
+  const { reports, resorts, webcams, forecastAt, loading } = useConditions();
 
   const lastObs = reports
     ? Object.values(reports.posts)
@@ -28,6 +28,16 @@ export function DataFreshness() {
         {reports ? `publiés ${relativeDateTime(reports.generatedAt)}` : 'pas encore chargés'}
         {lastObs ? ` (dernière mesure ${relativeDateTime(lastObs)})` : ''}
         <Text style={styles.src}> · Météo-France</Text>
+      </Text>
+      <Text style={styles.line}>
+        <Text style={styles.label}>Ouvertures et pistes : </Text>
+        {resorts ? `bulletins des stations repris ${relativeDateTime(resorts.generatedAt)}` : 'pas encore chargés'}
+        <Text style={styles.src}> · Skiinfo</Text>
+      </Text>
+      <Text style={styles.line}>
+        <Text style={styles.label}>Webcams : </Text>
+        {webcams ? `images indexées ${relativeDateTime(webcams.generatedAt)}` : 'pas encore chargées'}
+        <Text style={styles.src}> · Skaping</Text>
       </Text>
     </View>
   );
