@@ -1,10 +1,13 @@
-import { Link, Stack, useLocalSearchParams } from 'expo-router';
-import { Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
+import { Linking, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { reliability, totalSnowfall, weatherInfo, type AltitudeConditions } from '@/api/openMeteo';
 import { formatPostName, latestReports, type LatestReport } from '@/api/snowReports';
+import { isLive, stationWebcams } from '@/api/webcams';
 import { DataFreshness } from '@/components/DataFreshness';
 import { StarButton } from '@/components/StarButton';
+import { WebcamPanorama } from '@/components/WebcamPanorama';
 import { useConditions } from '@/data/ConditionsContext';
 import { distanceFromGrenoble, getStation } from '@/data/stations';
 import { colors, radius } from '@/theme';
@@ -14,7 +17,8 @@ import { MAX_READING_WIDTH } from '@/utils/layout';
 export default function StationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const station = getStation(String(id));
-  const { data, reports, loading, refresh } = useConditions();
+  const { data, reports, webcams, loading, refresh } = useConditions();
+  const [showAllCams, setShowAllCams] = useState(false);
 
   if (!station) {
     return (
@@ -25,6 +29,7 @@ export default function StationScreen() {
   }
   const c = data[station.id];
   const measured = latestReports(station, reports);
+  const cams = stationWebcams(station, webcams);
 
   return (
     <ScrollView
@@ -37,6 +42,29 @@ export default function StationScreen() {
         {station.massif} ({station.departement}) · {Math.round(distanceFromGrenoble(station))} km de Grenoble · {station.altBase}–
         {station.altTop} m
       </Text>
+
+      {/* Webcams */}
+      <Text style={styles.section}>
+        Webcams{cams.length ? ` · ${cams.filter(isLive).length} en direct` : ''}
+      </Text>
+      {cams.slice(0, showAllCams ? cams.length : 2).map((cam) => (
+        <WebcamPanorama key={cam.path} cam={cam} stationId={station.id} />
+      ))}
+      {cams.length > 2 && !showAllCams ? (
+        <Pressable style={styles.moreButton} onPress={() => setShowAllCams(true)}>
+          <Text style={styles.linkText}>Voir les {cams.length - 2} autres webcams</Text>
+        </Pressable>
+      ) : null}
+      {cams.length === 0 ? (
+        <Text style={styles.meta}>
+          {webcams ? 'Pas de webcam intégrée pour cette station.' : loading ? 'Chargement des webcams…' : ''}
+        </Text>
+      ) : null}
+      {station.webcams.map((w) => (
+        <Pressable key={w.url} style={styles.linkButton} onPress={() => Linking.openURL(w.url)}>
+          <Text style={styles.linkText}>📷 Toutes les webcams sur le site de la station ↗</Text>
+        </Pressable>
+      ))}
 
       {/* Relevés mesurés */}
       <Text style={styles.section}>Relevés mesurés · Météo-France</Text>
@@ -113,21 +141,6 @@ export default function StationScreen() {
         </>
       ) : null}
 
-      {/* Webcams */}
-      <Text style={styles.section}>Webcams</Text>
-      {station.webcams.map((w, i) =>
-        Platform.OS === 'web' ? (
-          <Pressable key={w.url} style={styles.button} onPress={() => Linking.openURL(w.url)}>
-            <Text style={styles.buttonText}>📷 {w.label} ↗</Text>
-          </Pressable>
-        ) : (
-          <Link key={w.url} href={{ pathname: '/webcam/[id]', params: { id: station.id, i: String(i) } }} asChild>
-            <Pressable style={styles.button}>
-              <Text style={styles.buttonText}>📷 {w.label}</Text>
-            </Pressable>
-          </Link>
-        ),
-      )}
       <Pressable style={styles.linkButton} onPress={() => Linking.openURL(station.website)}>
         <Text style={styles.linkText}>🌐 Site officiel de la station ↗</Text>
       </Pressable>
@@ -221,6 +234,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  linkButton: { paddingVertical: 10 },
+  linkButton: { paddingVertical: 8 },
+  moreButton: { paddingVertical: 4, marginBottom: 4 },
   linkText: { color: colors.primary, fontWeight: '600' },
 });

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,6 +14,7 @@ import {
 
 import { totalSnowfall, type StationConditions } from '@/api/openMeteo';
 import { currentReport, type LatestReport } from '@/api/snowReports';
+import { isLive, stationWebcams, type Webcam } from '@/api/webcams';
 import { Chip } from '@/components/Chip';
 import { DataFreshness } from '@/components/DataFreshness';
 import { SnowBars } from '@/components/SnowBars';
@@ -28,7 +30,7 @@ import {
   type Station,
 } from '@/data/stations';
 import { colors, radius } from '@/theme';
-import { cm, shortDate } from '@/utils/format';
+import { cm, relativeAge, shortDate } from '@/utils/format';
 import { MAX_CONTENT_WIDTH, useColumns } from '@/utils/layout';
 
 type Zone = 'favorites' | 'grenoble' | 'all' | Departement;
@@ -49,7 +51,7 @@ function inZone(s: Station, zone: Zone, favorites: string[]): boolean {
 }
 
 export default function StationsScreen() {
-  const { data, reports, loading, error, refresh } = useConditions();
+  const { data, reports, webcams, loading, error, refresh } = useConditions();
   const { favorites, ready } = useFavorites();
   // Au démarrage, l'app s'ouvre sur les favoris s'il y en a, sinon autour de Grenoble
   const [chosenZone, setZone] = useState<Zone | null>(null);
@@ -76,7 +78,12 @@ export default function StationsScreen() {
   const list = useMemo(() => {
     const items = zoneStations
       .filter((s) => !activeMassif || s.massif === activeMassif)
-      .map((s) => ({ station: s, dist: distanceFromGrenoble(s), report: currentReport(s, reports) }));
+      .map((s) => ({
+        station: s,
+        dist: distanceFromGrenoble(s),
+        report: currentReport(s, reports),
+        cam: stationWebcams(s, webcams).find(isLive),
+      }));
     const depth = (x: (typeof items)[number]) => x.report?.obs.snowDepthCm ?? data[x.station.id]?.top.snowDepthCm ?? -1;
     return items.sort((a, b) => {
       if (sort === 'distance') return a.dist - b.dist;
@@ -85,7 +92,7 @@ export default function StationsScreen() {
       if (sort === 'forecast') return (cb ? totalSnowfall(cb.top.days) : -1) - (ca ? totalSnowfall(ca.top.days) : -1);
       return depth(b) - depth(a);
     });
-  }, [zoneStations, activeMassif, sort, data, reports]);
+  }, [zoneStations, activeMassif, sort, data, reports, webcams]);
 
   // Sur plusieurs colonnes, on complète la dernière ligne pour garder des cartes de même largeur
   const rows: (typeof list[number] | null)[] = [...list];
@@ -157,6 +164,7 @@ export default function StationsScreen() {
               dist={item.dist}
               conditions={data[item.station.id]}
               report={item.report}
+              cam={item.cam}
               loading={loading}
             />
           </View>
@@ -179,12 +187,14 @@ function StationCard({
   dist,
   conditions,
   report,
+  cam,
   loading,
 }: {
   station: Station;
   dist: number;
   conditions?: StationConditions;
   report: LatestReport | null;
+  cam?: Webcam;
   loading: boolean;
 }) {
   const total = conditions ? totalSnowfall(conditions.top.days) : null;
@@ -193,6 +203,12 @@ function StationCard({
       onPress={() => router.push({ pathname: '/station/[id]', params: { id: station.id } })}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.85 }]}
     >
+        {cam ? (
+          <View style={styles.banner}>
+            <Image source={{ uri: cam.thumb }} style={styles.bannerImg} resizeMode="cover" accessibilityLabel={cam.label} />
+            <Text style={styles.bannerTag}>● Webcam · {relativeAge(cam.time)}</Text>
+          </View>
+        ) : null}
         <View style={styles.cardTop}>
           <StarButton stationId={station.id} />
           <View style={{ flex: 1 }}>
@@ -256,6 +272,21 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  banner: { marginTop: -14, marginHorizontal: -14, marginBottom: 12, height: 74, backgroundColor: colors.bg },
+  bannerImg: { width: '100%', height: '100%', borderTopLeftRadius: radius, borderTopRightRadius: radius },
+  bannerTag: {
+    position: 'absolute',
+    left: 8,
+    bottom: 6,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#fff',
+    backgroundColor: 'rgba(15,27,45,0.55)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   cardTop: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   name: { fontSize: 17, fontWeight: '700', color: colors.text },

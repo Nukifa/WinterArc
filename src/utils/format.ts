@@ -42,3 +42,11 @@ export function relativeDateTime(input: number | string): string {
   const day = sameDay(d, today) ? "aujourd'hui" : sameDay(d, yesterday) ? 'hier' : `le ${d.getDate()} ${MONTHS[d.getMonth()]}`;
   return `${day} à ${formatTime(d.getTime())}`;
 }
+
+/** "il y a 12 min", "il y a 3 h", sinon "le 6 avr." */
+export function relativeAge(iso: string): string {
+  const minutes = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60_000));
+  if (minutes < 60) return `il y a ${minutes} min`;
+  if (minutes < 24 * 60) return `il y a ${Math.round(minutes / 60)} h`;
+  return `le ${shortDate(iso)}`;
+}

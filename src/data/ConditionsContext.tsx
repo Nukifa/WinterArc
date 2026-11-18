@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState, ty
 
 import { fetchConditions, type StationConditions } from '@/api/openMeteo';
 import { fetchSnowReports, type SnowReports } from '@/api/snowReports';
+import { fetchWebcams, type WebcamIndex } from '@/api/webcams';
 import { STATIONS } from '@/data/stations';
 
 const MAX_AGE_MS = 30 * 60 * 1000; // 30 min
@@ -11,6 +12,8 @@ type State = {
   data: Record<string, StationConditions>;
   /** Relevés mesurés Météo-France */
   reports: SnowReports | null;
+  /** Dernières images des webcams Skaping */
+  webcams: WebcamIndex | null;
   loading: boolean;
   error: string | null;
   updatedAt: number | null;
@@ -24,6 +27,7 @@ const ConditionsContext = createContext<State | null>(null);
 export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Record<string, StationConditions>>({});
   const [reports, setReports] = useState<SnowReports | null>(null);
+  const [webcams, setWebcams] = useState<WebcamIndex | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -37,7 +41,12 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       inFlight.current = true;
       setLoading(true);
       setError(null);
-      const [forecast, measured] = await Promise.allSettled([fetchConditions(STATIONS), fetchSnowReports()]);
+      const [forecast, measured, cams] = await Promise.allSettled([
+        fetchConditions(STATIONS),
+        fetchSnowReports(),
+        fetchWebcams(),
+      ]);
+      if (cams.status === 'fulfilled') setWebcams(cams.value);
       if (forecast.status === 'fulfilled') {
         setData(forecast.value);
         setForecastAt(Date.now());
@@ -61,7 +70,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ConditionsContext.Provider value={{ data, reports, loading, error, updatedAt, forecastAt, refresh }}>
+    <ConditionsContext.Provider value={{ data, reports, webcams, loading, error, updatedAt, forecastAt, refresh }}>
       {children}
     </ConditionsContext.Provider>
   );

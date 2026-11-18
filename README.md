@@ -14,8 +14,9 @@ en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
 - **Enneigement estimé** au sommet et en bas du domaine, et neige fraîche des dernières 72 h.
 - **Prévisions de chute de neige sur 5 jours** (sommet et bas), avec températures, isotherme 0 °C
   et un indice de fiabilité : J0–J1 fiable, J2–J3 assez fiable, J4 simple tendance.
-- **Webcams** : la page webcams officielle de la station s'ouvre dans l'app (WebView), avec un
-  bouton pour l'ouvrir dans le navigateur. Sur la version web, c'est un lien direct.
+- **Webcams intégrées** (84 webcams Skaping sur 27 stations) : aperçu panoramique sur chaque carte,
+  panoramas à faire défiler en haut de la fiche station avec l'heure de la photo, et vue 360°
+  interactive de Skaping directement dans l'app. Lien vers la page webcams officielle pour les autres.
 
 ## Données
 
@@ -48,6 +49,13 @@ avec Expo / React Native Web. Le même code peut toujours produire une app mobil
 construit le site, récupère les relevés Météo-France et publie le tout sur GitHub Pages
 (Settings → Pages → Source : « GitHub Actions »). Il tourne aussi deux fois par jour pour rafraîchir les
 relevés.
+
+### Webcams
+
+`scripts/fetch-webcams.mjs` lit la dernière image de chaque webcam Skaping listée dans le champ
+`skaping` de `src/data/stations.ts` (balise `og:image` de la page) et publie `webcams.json`. Pour
+ajouter une webcam, chercher son chemin dans https://www.skaping.com/sitemap.players.xml. Les images
+restent hébergées par Skaping ; la vue 360° est leur lecteur officiel, intégré tel quel.
 
 ## Développement local
 

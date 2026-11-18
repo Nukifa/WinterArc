@@ -4,9 +4,10 @@ on:
   push:
     branches: [main, claude/cool-keller-w3lcz4]
   workflow_dispatch:
-  # Relevés Météo-France mis à jour vers 06h30 UTC : on republie deux fois par jour
+  # Republie toutes les heures en journée (heure UTC) pour rafraîchir les aperçus des webcams ;
+  # les relevés Météo-France, publiés vers 06h30 UTC, sont repris au passage.
   schedule:
-    - cron: '17 7,13 * * *'
+    - cron: '17 5-19 * * *'
 
 permissions:
   contents: read
@@ -32,6 +33,8 @@ jobs:
       - run: npx expo export --platform web --output-dir dist
       - name: Relevés de neige Météo-France
         run: node scripts/fetch-snow-reports.mjs dist/snow-reports.json
+      - name: Dernières images des webcams Skaping
+        run: node scripts/fetch-webcams.mjs dist/webcams.json
       # Routage côté client : GitHub Pages sert 404.html pour les URLs inconnues
       - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
       - uses: actions/upload-pages-artifact@v3
