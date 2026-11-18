@@ -2,15 +2,16 @@ import { Link, Stack, useLocalSearchParams } from 'expo-router';
 import { Linking, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { reliability, totalSnowfall, weatherInfo, type AltitudeConditions } from '@/api/openMeteo';
+import { formatPostName, latestReports, type LatestReport } from '@/api/snowReports';
 import { useConditions } from '@/data/ConditionsContext';
 import { distanceFromGrenoble, getStation } from '@/data/stations';
 import { colors, radius } from '@/theme';
-import { cm, longDay } from '@/utils/format';
+import { cm, longDay, shortDate } from '@/utils/format';
 
 export default function StationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const station = getStation(String(id));
-  const { data, loading, refresh } = useConditions();
+  const { data, reports, loading, refresh } = useConditions();
 
   if (!station) {
     return (
@@ -20,6 +21,7 @@ export default function StationScreen() {
     );
   }
   const c = data[station.id];
+  const measured = latestReports(station, reports);
 
   return (
     <ScrollView
@@ -33,8 +35,24 @@ export default function StationScreen() {
         {station.altTop} m
       </Text>
 
-      {/* Enneigement */}
-      <Text style={styles.section}>Enneigement estimé</Text>
+      {/* Relevés mesurés */}
+      <Text style={styles.section}>Relevés mesurés · Météo-France</Text>
+      {measured.length > 0 ? (
+        measured.map((r) => <MeasuredCard key={r.post.id} report={r} />)
+      ) : (
+        <Text style={styles.meta}>
+          {station.nivoIds.length === 0
+            ? "Pas de poste de mesure Météo-France dans cette station : seule l'estimation ci-dessous est disponible."
+            : reports
+              ? 'Aucun relevé ces 10 derniers jours : les mesures reprennent à l\'ouverture de la station (généralement mi-décembre).'
+              : loading
+                ? 'Chargement…'
+                : 'Relevés indisponibles.'}
+        </Text>
+      )}
+
+      {/* Enneigement estimé */}
+      <Text style={styles.section}>Enneigement estimé · modèle météo</Text>
       {c ? (
         <View style={styles.row}>
           <DepthCard title="Sommet" cond={c.top} />
@@ -112,10 +130,40 @@ export default function StationScreen() {
       </Pressable>
 
       <Text style={styles.note}>
-        Hauteurs de neige issues d'un modèle météo (Open-Meteo), recalculées à l'altitude du sommet et du bas : ce ne
-        sont pas les relevés officiels de la station.
+        Relevés mesurés : réseau nivo-météorologique Météo-France (data.gouv.fr, licence Etalab 2.0), mis à jour une
+        fois par jour. Estimations et prévisions : Open-Meteo (modèles Météo-France AROME / ARPEGE), recalculées à
+        l'altitude du sommet et du bas.
       </Text>
     </ScrollView>
+  );
+}
+
+function MeasuredCard({ report }: { report: LatestReport }) {
+  const { post, obs, isRecent } = report;
+  const history = post.obs.filter((o) => o.snowDepthCm !== null).slice(-7);
+  return (
+    <View style={[styles.card, { padding: 14, marginBottom: 8 }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.small}>
+            {formatPostName(post.name)} · {post.altitude} m
+          </Text>
+          <Text style={styles.bigNum}>{cm(obs.snowDepthCm)}</Text>
+        </View>
+        <Text style={[styles.badge, isRecent ? styles.badgeOk : styles.badgeOld]}>
+          {isRecent ? 'Mesuré' : 'Ancien'} · {shortDate(obs.time)}
+        </Text>
+      </View>
+      <Text style={styles.small}>
+        Neige fraîche 24 h : {cm(obs.freshSnowCm)}
+        {obs.tempC !== null ? ` · ${obs.tempC.toFixed(1).replace('.', ',')} °C au relevé` : ''}
+      </Text>
+      {history.length > 1 ? (
+        <Text style={[styles.small, { marginTop: 4 }]}>
+          Derniers relevés : {history.map((o) => `${shortDate(o.time)} ${o.snowDepthCm} cm`).join(' · ')}
+        </Text>
+      ) : null}
+    </View>
   );
 }
 
@@ -146,6 +194,9 @@ const styles = StyleSheet.create({
   },
   bigNum: { fontSize: 28, fontWeight: '800', color: colors.text, marginVertical: 4 },
   small: { fontSize: 11, color: colors.muted },
+  badge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, overflow: 'hidden' },
+  badgeOk: { color: colors.high, backgroundColor: '#E2F5EA' },
+  badgeOld: { color: colors.medium, backgroundColor: '#FDF3E1' },
   fRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 10 },
   fHead: { backgroundColor: colors.primarySoft, paddingVertical: 8 },
   headText: { fontSize: 11, fontWeight: '700', color: colors.primary },

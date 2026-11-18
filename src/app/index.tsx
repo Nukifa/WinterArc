@@ -3,32 +3,39 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 
 import { totalSnowfall, type StationConditions } from '@/api/openMeteo';
+import { currentReport, type LatestReport } from '@/api/snowReports';
 import { Chip } from '@/components/Chip';
 import { SnowBars } from '@/components/SnowBars';
 import { useConditions } from '@/data/ConditionsContext';
 import { distanceFromGrenoble, GRENOBLE_RADIUS_KM, STATIONS, type Station } from '@/data/stations';
 import { colors, radius } from '@/theme';
-import { cm, formatTime } from '@/utils/format';
+import { cm, formatTime, shortDate } from '@/utils/format';
 
 type Zone = 'grenoble' | 'all';
 type Sort = 'distance' | 'forecast' | 'depth';
 
 export default function StationsScreen() {
-  const { data, loading, error, updatedAt, refresh } = useConditions();
+  const { data, reports, loading, error, updatedAt, refresh } = useConditions();
   const [zone, setZone] = useState<Zone>('grenoble');
   const [sort, setSort] = useState<Sort>('distance');
 
   const list = useMemo(() => {
-    const withDist = STATIONS.map((s) => ({ station: s, dist: distanceFromGrenoble(s) }));
+    const withDist = STATIONS.map((s) => ({
+      station: s,
+      dist: distanceFromGrenoble(s),
+      report: currentReport(s, reports),
+    }));
+    const depth = (x: (typeof withDist)[number]) =>
+      x.report?.obs.snowDepthCm ?? data[x.station.id]?.top.snowDepthCm ?? -1;
     const filtered = zone === 'grenoble' ? withDist.filter((x) => x.dist <= GRENOBLE_RADIUS_KM) : withDist;
     return [...filtered].sort((a, b) => {
       if (sort === 'distance') return a.dist - b.dist;
       const ca = data[a.station.id];
       const cb = data[b.station.id];
       if (sort === 'forecast') return (cb ? totalSnowfall(cb.top.days) : -1) - (ca ? totalSnowfall(ca.top.days) : -1);
-      return (cb?.top.snowDepthCm ?? -1) - (ca?.top.snowDepthCm ?? -1);
+      return depth(b) - depth(a);
     });
-  }, [zone, sort, data]);
+  }, [zone, sort, data, reports]);
 
   return (
     <FlatList
@@ -57,12 +64,18 @@ export default function StationsScreen() {
         </View>
       }
       renderItem={({ item }) => (
-        <StationCard station={item.station} dist={item.dist} conditions={data[item.station.id]} loading={loading} />
+        <StationCard
+          station={item.station}
+          dist={item.dist}
+          conditions={data[item.station.id]}
+          report={item.report}
+          loading={loading}
+        />
       )}
       ListFooterComponent={
         <Text style={styles.footer}>
-          Hauteurs de neige estimées par modèle météo (non officielles). Prévisions limitées à 5 jours pour rester
-          fiables.
+          « Mesuré » : relevé du réseau nivo-météorologique Météo-France (stations ouvertes). « Estimé » : modèle
+          météo Open-Meteo. Prévisions limitées à 5 jours pour rester fiables.
         </Text>
       }
     />
@@ -73,11 +86,13 @@ function StationCard({
   station,
   dist,
   conditions,
+  report,
   loading,
 }: {
   station: Station;
   dist: number;
   conditions?: StationConditions;
+  report: LatestReport | null;
   loading: boolean;
 }) {
   const total = conditions ? totalSnowfall(conditions.top.days) : null;
@@ -99,14 +114,24 @@ function StationCard({
           ) : null}
         </View>
 
-        {conditions ? (
+        {conditions || report ? (
           <View style={styles.cardBottom}>
-            <View style={styles.depths}>
-              <Text style={styles.depthLabel}>Sommet</Text>
-              <Text style={styles.depthValue}>{cm(conditions.top.snowDepthCm)}</Text>
-              <Text style={styles.depthLabel}>Bas · {cm(conditions.base.snowDepthCm)}</Text>
-            </View>
-            <SnowBars days={conditions.top.days} />
+            {report ? (
+              <View style={styles.depths}>
+                <Text style={[styles.tag, styles.tagMeasured]}>MESURÉ · {report.post.altitude} m</Text>
+                <Text style={styles.depthValue}>{cm(report.obs.snowDepthCm)}</Text>
+                <Text style={styles.depthLabel}>Météo-France · {shortDate(report.obs.time)}</Text>
+              </View>
+            ) : conditions ? (
+              <View style={styles.depths}>
+                <Text style={[styles.tag, styles.tagModel]}>ESTIMÉ · sommet</Text>
+                <Text style={styles.depthValue}>{cm(conditions.top.snowDepthCm)}</Text>
+                <Text style={styles.depthLabel}>Bas · {cm(conditions.base.snowDepthCm)}</Text>
+              </View>
+            ) : (
+              <View />
+            )}
+            {conditions ? <SnowBars days={conditions.top.days} /> : null}
           </View>
         ) : loading ? (
           <ActivityIndicator style={{ marginTop: 12 }} color={colors.primary} />
@@ -148,6 +173,9 @@ const styles = StyleSheet.create({
   cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 12 },
   depths: { gap: 1 },
   depthLabel: { fontSize: 11, color: colors.muted },
+  tag: { fontSize: 9, fontWeight: '800', letterSpacing: 0.5, alignSelf: 'flex-start', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, overflow: 'hidden' },
+  tagMeasured: { color: colors.high, backgroundColor: '#E2F5EA' },
+  tagModel: { color: colors.muted, backgroundColor: '#EEF1F5' },
   depthValue: { fontSize: 24, fontWeight: '800', color: colors.text },
   footer: { color: colors.muted, fontSize: 11, textAlign: 'center', marginTop: 8, marginBottom: 24 },
 });

@@ -1,12 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { fetchConditions, type StationConditions } from '@/api/openMeteo';
+import { fetchSnowReports, type SnowReports } from '@/api/snowReports';
 import { STATIONS } from '@/data/stations';
 
 const MAX_AGE_MS = 30 * 60 * 1000; // 30 min
 
 type State = {
+  /** Prévisions et estimations Open-Meteo */
   data: Record<string, StationConditions>;
+  /** Relevés mesurés Météo-France */
+  reports: SnowReports | null;
   loading: boolean;
   error: string | null;
   updatedAt: number | null;
@@ -17,6 +21,7 @@ const ConditionsContext = createContext<State | null>(null);
 
 export function ConditionsProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<Record<string, StationConditions>>({});
+  const [reports, setReports] = useState<SnowReports | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<number | null>(null);
@@ -29,16 +34,16 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
       inFlight.current = true;
       setLoading(true);
       setError(null);
-      try {
-        const res = await fetchConditions(STATIONS);
-        setData(res);
-        setUpdatedAt(Date.now());
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Erreur réseau');
-      } finally {
-        inFlight.current = false;
-        setLoading(false);
-      }
+      const [forecast, measured] = await Promise.allSettled([fetchConditions(STATIONS), fetchSnowReports()]);
+      if (forecast.status === 'fulfilled') setData(forecast.value);
+      if (measured.status === 'fulfilled') setReports(measured.value);
+      const errors = [forecast, measured]
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map((r) => (r.reason instanceof Error ? r.reason.message : 'Erreur réseau'));
+      setError(errors.length ? errors.join(' · ') : null);
+      if (errors.length < 2) setUpdatedAt(Date.now());
+      inFlight.current = false;
+      setLoading(false);
     },
     [updatedAt],
   );
@@ -49,7 +54,7 @@ export function ConditionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <ConditionsContext.Provider value={{ data, loading, error, updatedAt, refresh }}>
+    <ConditionsContext.Provider value={{ data, reports, loading, error, updatedAt, refresh }}>
       {children}
     </ConditionsContext.Provider>
   );

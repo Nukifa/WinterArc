@@ -25,3 +25,9 @@ export function formatTime(ts: number): string {
 export function cm(v: number | null): string {
   return v === null ? '—' : `${v} cm`;
 }
+
+/** "17 nov." à partir d'une date ISO (UTC) */
+export function shortDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
