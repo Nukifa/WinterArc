@@ -1,6 +1,6 @@
 # ❄️ Névé
 
-Application mobile (Expo / React Native) pour consulter l'enneigement des stations des Alpes françaises,
+Application **web** (mobile et PC, installable sur l'écran d'accueil) pour consulter l'enneigement des stations des Alpes françaises,
 en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
 
 ## Fonctionnalités (v0)
@@ -30,21 +30,33 @@ en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
 - Stations, coordonnées, altitudes et liens webcams : `src/data/stations.ts`. Les liens webcams
   peuvent changer d'une saison à l'autre : vérifie-les et complète-les si besoin.
 
-## Version web (GitHub Pages)
+## Utilisation
 
-À chaque push, le workflow `.github/workflows/deploy-web.yml` publie la version web sur
-<https://nukifa.github.io/WinterArc/>.
+👉 **https://nukifa.github.io/WinterArc/**
 
-À faire une seule fois : **Settings → Pages → Build and deployment → Source : « GitHub Actions »**.
+- **Sur PC** : directement dans le navigateur ; la liste s'affiche sur 2 ou 3 colonnes.
+- **Sur mobile** : ouvrir le lien puis « Ajouter à l'écran d'accueil » (Safari : bouton Partager ;
+  Chrome : menu ⋮). Névé s'ouvre alors en plein écran comme une app, avec son icône.
+- **Hors connexion** : l'app et les dernières données consultées restent affichées.
 
-## Lancer l'app
+Techniquement c'est une PWA (manifest + service worker « réseau d'abord » dans `public/`), construite
+avec Expo / React Native Web. Le même code peut toujours produire une app mobile native si besoin.
+
+## Publication
+
+À chaque push, le workflow `.github/workflows/deploy-web.yml` vérifie le code (typecheck + lint),
+construit le site, récupère les relevés Météo-France et publie le tout sur GitHub Pages
+(Settings → Pages → Source : « GitHub Actions »). Il tourne aussi deux fois par jour pour rafraîchir les
+relevés.
+
+## Développement local
 
 ```bash
 npm install
 npx expo start
 ```
 
-Ensuite, scanne le QR code avec l'app **Expo Go** (Android / iOS).
+Puis touche `w` pour ouvrir la version web dans le navigateur.
 
 ## Structure
 

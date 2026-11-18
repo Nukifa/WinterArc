@@ -9,6 +9,7 @@ import { useConditions } from '@/data/ConditionsContext';
 import { distanceFromGrenoble, getStation } from '@/data/stations';
 import { colors, radius } from '@/theme';
 import { cm, longDay, shortDate } from '@/utils/format';
+import { MAX_READING_WIDTH } from '@/utils/layout';
 
 export default function StationScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -186,7 +187,7 @@ function DepthCard({ title, cond }: { title: string; cond: AltitudeConditions })
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  content: { padding: 16, paddingBottom: 40 },
+  content: { padding: 16, paddingBottom: 40, width: '100%', maxWidth: MAX_READING_WIDTH, alignSelf: 'center' },
   meta: { color: colors.muted, fontSize: 13 },
   section: { fontSize: 15, fontWeight: '700', color: colors.text, marginTop: 22, marginBottom: 10 },
   row: { flexDirection: 'row', gap: 10 },

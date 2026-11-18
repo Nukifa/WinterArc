@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
+    <title>Névé – Neige des Alpes</title>
+    <meta name="description" content="Enneigement mesuré, prévisions de neige à 5 jours et webcams des stations des Alpes, autour de Grenoble." />
+    <meta name="theme-color" content="#1E6FD9" />
+
+    <!-- Application web installable (PWA) -->
+    <link rel="manifest" href="/WinterArc/manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="/WinterArc/icons/favicon-64.png" />
+    <link rel="apple-touch-icon" href="/WinterArc/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Névé" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      html,
+      body {
+        height: 100%;
+        background: #f2f6fb;
+      }
+      body {
+        overflow: hidden;
+      }
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <noscript>Activez JavaScript pour utiliser Névé.</noscript>
+    <div id="root"></div>
+    <script>
+      if ('serviceWorker' in navigator && location.pathname.startsWith('/WinterArc')) {
+        window.addEventListener('load', function () {
+          navigator.serviceWorker.register('/WinterArc/sw.js', { scope: '/WinterArc/' }).catch(function () {});
+        });
+      }
+    </script>
+  </body>
+</html>

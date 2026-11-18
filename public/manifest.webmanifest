@@ -1,0 +1,16 @@
+{
+  "name": "Névé – Neige des Alpes",
+  "short_name": "Névé",
+  "description": "Enneigement mesuré, prévisions de neige à 5 jours et webcams des stations des Alpes, autour de Grenoble.",
+  "lang": "fr",
+  "start_url": "/WinterArc/",
+  "scope": "/WinterArc/",
+  "display": "standalone",
+  "background_color": "#F2F6FB",
+  "theme_color": "#1E6FD9",
+  "icons": [
+    { "src": "/WinterArc/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/WinterArc/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/WinterArc/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

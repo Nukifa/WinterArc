@@ -29,6 +29,7 @@ import {
 } from '@/data/stations';
 import { colors, radius } from '@/theme';
 import { cm, shortDate } from '@/utils/format';
+import { MAX_CONTENT_WIDTH, useColumns } from '@/utils/layout';
 
 type Zone = 'favorites' | 'grenoble' | 'all' | Departement;
 type Sort = 'distance' | 'forecast' | 'depth';
@@ -55,6 +56,7 @@ export default function StationsScreen() {
   const zone: Zone = chosenZone ?? (ready && favorites.length > 0 ? 'favorites' : 'grenoble');
   const [massif, setMassif] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('distance');
+  const columns = useColumns();
 
 
   const zoneStations = useMemo(() => STATIONS.filter((s) => inZone(s, zone, favorites)), [zone, favorites]);
@@ -85,11 +87,18 @@ export default function StationsScreen() {
     });
   }, [zoneStations, activeMassif, sort, data, reports]);
 
+  // Sur plusieurs colonnes, on complète la dernière ligne pour garder des cartes de même largeur
+  const rows: (typeof list[number] | null)[] = [...list];
+  while (columns > 1 && rows.length % columns !== 0) rows.push(null);
+
   return (
     <FlatList
-      data={list}
-      keyExtractor={(x) => x.station.id}
+      key={`cols-${columns}`}
+      data={rows}
+      numColumns={columns}
+      keyExtractor={(x, i) => x?.station.id ?? `empty-${i}`}
       contentContainerStyle={styles.content}
+      columnWrapperStyle={columns > 1 ? styles.row : undefined}
       refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh(true)} />}
       ListHeaderComponent={
         <View style={styles.header}>
@@ -140,15 +149,21 @@ export default function StationsScreen() {
           </View>
         ) : undefined
       }
-      renderItem={({ item }) => (
-        <StationCard
-          station={item.station}
-          dist={item.dist}
-          conditions={data[item.station.id]}
-          report={item.report}
-          loading={loading}
-        />
-      )}
+      renderItem={({ item }) =>
+        item ? (
+          <View style={styles.cell}>
+            <StationCard
+              station={item.station}
+              dist={item.dist}
+              conditions={data[item.station.id]}
+              report={item.report}
+              loading={loading}
+            />
+          </View>
+        ) : (
+          <View style={styles.cell} />
+        )
+      }
       ListFooterComponent={
         <Text style={styles.footer}>
           « Mesuré » : relevé du réseau nivo-météorologique Météo-France (stations ouvertes). « Estimé » : modèle
@@ -223,7 +238,9 @@ function StationCard({
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 12 },
+  content: { padding: 16, gap: 12, width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center' },
+  row: { gap: 12 },
+  cell: { flex: 1, minWidth: 0 },
   header: { gap: 10, marginBottom: 4 },
   chips: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingRight: 16 },
   empty: { alignItems: 'center', gap: 10, paddingVertical: 24, paddingHorizontal: 12 },
@@ -233,6 +250,7 @@ const styles = StyleSheet.create({
   error: { backgroundColor: '#FDECEA', padding: 10, borderRadius: 10 },
   errorText: { color: colors.danger, fontSize: 13 },
   card: {
+    flex: 1,
     backgroundColor: colors.card,
     borderRadius: radius,
     padding: 14,
