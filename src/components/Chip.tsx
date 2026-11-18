@@ -38,5 +38,5 @@ const styles = StyleSheet.create({
   textSmall: { fontSize: 12 },
   active: { backgroundColor: colors.primary, borderColor: colors.primary },
   text: { color: colors.text, fontSize: 13, fontWeight: '600' },
-  textActive: { color: '#fff' },
+  textActive: { color: colors.onPrimary },
 });

@@ -64,5 +64,5 @@ const styles = StyleSheet.create({
   msg: { color: colors.text, textAlign: 'center' },
   headerLink: { color: colors.primary, fontWeight: '600' },
   button: { backgroundColor: colors.primary, paddingHorizontal: 18, paddingVertical: 12, borderRadius: 12 },
-  buttonText: { color: '#fff', fontWeight: '700' },
+  buttonText: { color: colors.onPrimary, fontWeight: '700' },
 });

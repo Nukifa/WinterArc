@@ -6,7 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover" />
     <title>Névé – Neige des Alpes</title>
     <meta name="description" content="Enneigement mesuré, prévisions de neige à 5 jours et webcams des stations des Alpes, autour de Grenoble." />
-    <meta name="theme-color" content="#1E6FD9" />
+    <meta name="theme-color" content="#1E6FD9" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0E1621" media="(prefers-color-scheme: dark)" />
+    <script>
+      // Thème choisi par l'utilisateur, appliqué avant le premier affichage
+      try {
+        var t = localStorage.getItem('neve:theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
 
     <!-- Application web installable (PWA) -->
     <link rel="manifest" href="/WinterArc/manifest.webmanifest" />
@@ -23,6 +31,16 @@
       body {
         height: 100%;
         background: #f2f6fb;
+      }
+      @media (prefers-color-scheme: dark) {
+        html:not([data-theme='light']),
+        html:not([data-theme='light']) body {
+          background: #0e1621;
+        }
+      }
+      html[data-theme='dark'],
+      html[data-theme='dark'] body {
+        background: #0e1621;
       }
       body {
         overflow: hidden;

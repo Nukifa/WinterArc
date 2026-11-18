@@ -19,6 +19,11 @@ en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
   snowparks, horaires, plan des pistes. Filtre « Ouvertes uniquement » et tri par date d'ouverture.
 - **Chutes de neige** : 7 derniers jours et 5 prochains jours sur un même graphique ; « neige 3 derniers
   jours / prévue 3 jours » sur chaque carte. Stations les plus proches en bas de la fiche.
+- **Où skier ce week-end ?** : classement des stations ouvertes pour le prochain week-end (neige fraîche
+  attendue, enneigement, soleil, pluie, distance), avec les raisons de chaque note.
+- **Carte des stations** (Leaflet + OpenStreetMap / OpenTopoMap) colorée selon la neige prévue ou
+  l'enneigement, bulle d'infos et accès à la fiche.
+- **Mode sombre** : suit le réglage du système, ou forcé via le bouton 🌓 en haut à droite.
 - **Webcams intégrées** (84 webcams Skaping sur 27 stations) : aperçu panoramique sur chaque carte,
   panoramas à faire défiler en haut de la fiche station avec l'heure de la photo, et vue 360°
   interactive de Skaping directement dans l'app. Lien vers la page webcams officielle pour les autres.
