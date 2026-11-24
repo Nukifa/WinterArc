@@ -18,6 +18,7 @@ import { currentReport, type LatestReport } from '@/api/snowReports';
 import { isLive, stationWebcams, type Webcam } from '@/api/webcams';
 import { Chip } from '@/components/Chip';
 import { DataFreshness } from '@/components/DataFreshness';
+import { SearchBar } from '@/components/SearchBar';
 import { SnowBars } from '@/components/SnowBars';
 import { StarButton } from '@/components/StarButton';
 import { useConditions } from '@/data/ConditionsContext';
@@ -33,6 +34,7 @@ import {
 import { colors, radius } from '@/theme';
 import { cm, dayMonth, relativeAge, shortDate } from '@/utils/format';
 import { MAX_CONTENT_WIDTH, useColumns } from '@/utils/layout';
+import { matchesQuery } from '@/utils/search';
 
 type Zone = 'favorites' | 'grenoble' | 'all' | Departement;
 type Sort = 'distance' | 'forecast' | 'depth' | 'opening';
@@ -60,6 +62,8 @@ export default function StationsScreen() {
   const [massif, setMassif] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('distance');
   const [onlyOpen, setOnlyOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const searching = query.trim().length > 0;
   const columns = useColumns();
 
   const zoneStations = useMemo(() => STATIONS.filter((s) => inZone(s, zone, favorites)), [zone, favorites]);
@@ -77,8 +81,11 @@ export default function StationsScreen() {
   const activeMassif = massif && massifs.includes(massif) ? massif : null;
 
   const list = useMemo(() => {
-    const items = zoneStations
-      .filter((s) => !activeMassif || s.massif === activeMassif)
+    // Une recherche porte sur toutes les stations, quels que soient la zone et le massif choisis
+    const base = searching
+      ? STATIONS.filter((s) => matchesQuery(s, query))
+      : zoneStations.filter((s) => !activeMassif || s.massif === activeMassif);
+    const items = base
       .map((s) => ({
         station: s,
         dist: distanceFromGrenoble(s),
@@ -86,7 +93,7 @@ export default function StationsScreen() {
         cam: stationWebcams(s, webcams).find(isLive),
         resort: stationResort(s, resorts),
       }))
-      .filter((x) => !onlyOpen || x.resort?.status === 'open');
+      .filter((x) => searching || !onlyOpen || x.resort?.status === 'open');
     const depth = (x: (typeof items)[number]) => x.report?.obs.snowDepthCm ?? data[x.station.id]?.top.snowDepthCm ?? -1;
     return items.sort((a, b) => {
       if (sort === 'distance') return a.dist - b.dist;
@@ -96,7 +103,7 @@ export default function StationsScreen() {
       if (sort === 'forecast') return (cb ? totalSnowfall(cb.top.days) : -1) - (ca ? totalSnowfall(ca.top.days) : -1);
       return depth(b) - depth(a);
     });
-  }, [zoneStations, activeMassif, sort, onlyOpen, data, reports, webcams, resorts]);
+  }, [searching, query, zoneStations, activeMassif, sort, onlyOpen, data, reports, webcams, resorts]);
 
   // Sur plusieurs colonnes, on complète la dernière ligne pour garder des cartes de même largeur
   const rows: (typeof list[number] | null)[] = [...list];
@@ -113,7 +120,22 @@ export default function StationsScreen() {
       refreshControl={<RefreshControl refreshing={loading} onRefresh={() => refresh(true)} />}
       ListHeaderComponent={
         <View style={styles.header}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+          <SearchBar
+            value={query}
+            onChange={setQuery}
+            onSubmit={() => {
+              if (list.length === 1) router.push({ pathname: '/station/[id]', params: { id: list[0].station.id } });
+            }}
+          />
+          {searching ? (
+            <Text style={styles.searchInfo}>
+              {list.length === 0
+                ? `Aucune station ne correspond à « ${query.trim()} »`
+                : `${list.length} station${list.length > 1 ? 's' : ''} pour « ${query.trim()} » (dans toutes les Alpes)`}
+            </Text>
+          ) : null}
+          {searching ? null : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
             {ZONES.map((z) => (
               <Chip
                 key={z.key}
@@ -125,8 +147,9 @@ export default function StationsScreen() {
                 }}
               />
             ))}
-          </ScrollView>
-          {massifs.length > 1 ? (
+            </ScrollView>
+          )}
+          {!searching && massifs.length > 1 ? (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
               <Text style={styles.sortLabel}>Massif :</Text>
               <Chip label="Tous" active={!activeMassif} onPress={() => setMassif(null)} small />
@@ -153,7 +176,14 @@ export default function StationsScreen() {
         </View>
       }
       ListEmptyComponent={
-        onlyOpen && zoneStations.length > 0 ? (
+        searching ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>
+              Essayez un nom de station, de village ou de massif (ex. « Prapoutel », « Vercors », « Oisans »).
+            </Text>
+            <Chip label="Effacer la recherche" active onPress={() => setQuery('')} />
+          </View>
+        ) : onlyOpen && zoneStations.length > 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyTitle}>Aucune station ouverte pour le moment</Text>
             <Text style={styles.emptyText}>
@@ -315,6 +345,7 @@ const styles = StyleSheet.create({
   row: { gap: 12 },
   cell: { flex: 1, minWidth: 0 },
   header: { gap: 10, marginBottom: 4 },
+  searchInfo: { fontSize: 13, color: colors.muted },
   chips: { flexDirection: 'row', gap: 8, alignItems: 'center', paddingRight: 16 },
   empty: { alignItems: 'center', gap: 10, paddingVertical: 24, paddingHorizontal: 12 },
   emptyTitle: { fontSize: 16, fontWeight: '700', color: colors.text },
