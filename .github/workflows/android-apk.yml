@@ -39,7 +39,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: gradle
       - run: npm ci
       # Adresse des données (site.config.json) : l'app lit les mêmes fichiers que la version web
       - run: node scripts/site.mjs env >> "$GITHUB_ENV"
