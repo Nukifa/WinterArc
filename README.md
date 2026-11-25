@@ -53,6 +53,26 @@ en priorité autour de Grenoble. (Nom de code du dépôt : WinterArc.)
 Techniquement c'est une PWA (manifest + service worker « réseau d'abord » dans `public/`), construite
 avec Expo / React Native Web. Le même code peut toujours produire une app mobile native si besoin.
 
+## App Android (APK)
+
+Le même code produit une app Android native, qui lit les mêmes données que la version web
+(prévisions Open-Meteo en direct, relevés / webcams / bulletins publiés sur le site).
+
+👉 Télécharger : https://github.com/Nukifa/WinterArc/releases/tag/android (fichier `Neve.apk`)
+
+- Sur le téléphone, ouvrir ce lien, télécharger `Neve.apk` et autoriser l'installation depuis le
+  navigateur si Android le demande (« sources inconnues »). Play Protect peut afficher un avertissement
+  puisque l'app ne vient pas du Play Store.
+- Les mises à jour s'installent par-dessus la version précédente : les favoris sont conservés.
+- Le workflow `.github/workflows/android-apk.yml` reconstruit l'APK à chaque modification de l'app
+  (environ 15–20 min) ; il peut aussi être lancé à la main depuis l'onglet Actions.
+- Par défaut l'APK est signé avec la clé de développement du modèle Expo. Pour une clé personnelle,
+  ajouter les secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD` et `ANDROID_KEY_ALIAS`
+  (changer de clé impose de désinstaller l'app une fois).
+
+Sur mobile, la carte est la même carte Leaflet / OpenStreetMap que sur le web (dans une WebView) et
+le thème clair / sombre suit celui du téléphone au lancement de l'app.
+
 ## Publication
 
 À chaque push, le workflow `.github/workflows/deploy-web.yml` vérifie le code (typecheck + lint),

@@ -1,0 +1,101 @@
+name: Construire l'app Android (APK)
+
+# Construit l'APK de Névé et le publie dans la Release « android » du dépôt :
+# https://github.com/Nukifa/WinterArc/releases/tag/android
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, claude/cool-keller-w3lcz4]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'app.json'
+      - 'app.config.js'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/android-apk.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      # Numéro de version Android croissant : chaque APK s'installe par-dessus le précédent
+      ANDROID_VERSION_CODE: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - run: npm ci
+      # Adresse des données (site.config.json) : l'app lit les mêmes fichiers que la version web
+      - run: node scripts/site.mjs env >> "$GITHUB_ENV"
+      - run: npx tsc --noEmit
+      - name: Génération du projet Android
+        run: npx expo prebuild --platform android --no-install
+      - name: Signature avec une clé personnelle (optionnelle)
+        # Sans les secrets ANDROID_KEYSTORE_*, l'APK est signé avec la clé de développement du modèle Expo
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "Pas de clé personnelle : signature avec la clé de développement."
+            exit 0
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/neve-release.keystore
+          cat >> android/app/build.gradle <<GRADLE
+
+          android {
+              signingConfigs {
+                  neveRelease {
+                      storeFile file('neve-release.keystore')
+                      storePassword System.getenv('KEYSTORE_PASSWORD')
+                      keyAlias System.getenv('KEY_ALIAS')
+                      keyPassword System.getenv('KEYSTORE_PASSWORD')
+                  }
+              }
+              buildTypes.release.signingConfig signingConfigs.neveRelease
+          }
+          GRADLE
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+          echo "KEY_ALIAS=$KEY_ALIAS" >> "$GITHUB_ENV"
+      - name: Construction de l'APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+      - name: Publication dans la Release « android »
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/release/app-release.apk Neve.apk
+          VERSION=$(node -p "require('./app.json').expo.version")
+          NOTES="Névé $VERSION (build $ANDROID_VERSION_CODE, $(date -u +%Y-%m-%d)).
+
+          Installation : ouvrir cette page sur le téléphone Android, télécharger Neve.apk, puis autoriser
+          l'installation depuis le navigateur si Android le demande. Les mises à jour s'installent par-dessus
+          la version précédente (les favoris sont conservés)."
+          if gh release view android >/dev/null 2>&1; then
+            gh release edit android --title "Névé pour Android" --notes "$NOTES"
+          else
+            gh release create android --title "Névé pour Android" --notes "$NOTES" --target "$GITHUB_SHA"
+          fi
+          gh release upload android Neve.apk --clobber
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Neve-apk
+          path: Neve.apk
+          retention-days: 14

@@ -1,13 +1,17 @@
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text } from 'react-native';
 
 import { useThemeMode } from '@/data/ThemeContext';
 import { colors } from '@/theme';
 
 const LABEL = { auto: '🌓 Auto', dark: '🌙 Sombre', light: '☀️ Clair' } as const;
 
-/** Bascule du thème : automatique (système) → sombre → clair. */
+/**
+ * Bascule du thème : automatique (système) → sombre → clair.
+ * Web uniquement : sur mobile, l'app suit le thème du téléphone.
+ */
 export function ThemeToggle() {
   const { mode, cycle } = useThemeMode();
+  if (Platform.OS !== 'web') return null;
   return (
     <Pressable
       onPress={cycle}

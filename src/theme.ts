@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Appearance, Platform } from 'react-native';
 
 /** Palette claire (référence). */
 const light = {
@@ -52,13 +52,21 @@ const dark: ThemeColors = {
 const cssVar = (key: string) => `--c-${key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)}`;
 
 /**
+ * Mobile natif : le thème (clair / sombre) du téléphone est lu au lancement de l'app.
+ * Les styles sont figés à ce moment-là ; un changement de thème système s'applique au lancement suivant.
+ */
+export const isDarkTheme = Platform.OS !== 'web' && Appearance.getColorScheme() === 'dark';
+
+/**
  * Couleurs à utiliser dans les styles. Sur le web ce sont des variables CSS : le thème clair / sombre
- * change alors sans recalculer les styles (voir themeCss et ThemeContext). Sur mobile natif : palette claire.
+ * change alors sans recalculer les styles (voir themeCss et ThemeContext). Sur mobile : palette du thème système.
  */
 export const colors: ThemeColors =
   Platform.OS === 'web'
     ? (Object.fromEntries(Object.keys(light).map((k) => [k, `var(${cssVar(k)})`])) as ThemeColors)
-    : light;
+    : isDarkTheme
+      ? dark
+      : light;
 
 export const palettes = { light, dark };
 

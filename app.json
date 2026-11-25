@@ -2,16 +2,18 @@
   "expo": {
     "name": "Névé",
     "slug": "winterarc",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "io.github.nukifa.neve"
     },
     "android": {
+      "package": "io.github.nukifa.neve",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1E6FD9",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -24,8 +26,21 @@
       "output": "single"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#F2F6FB",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0E1621"
+          }
+        }
+      ]
     ],
-    "scheme": "winterarc"
+    "scheme": "neve"
   }
 }
