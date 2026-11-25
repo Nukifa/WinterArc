@@ -45,6 +45,8 @@ jobs:
       - run: npx tsc --noEmit
       - name: Génération du projet Android
         run: npx expo prebuild --platform android --no-install
+      - name: Mémoire de Gradle
+        run: echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" >> android/gradle.properties
       - name: Signature avec une clé personnelle (optionnelle)
         # Sans les secrets ANDROID_KEYSTORE_*, l'APK est signé avec la clé de développement du modèle Expo
         env:
@@ -76,25 +78,34 @@ jobs:
       - name: Construction de l'APK
         working-directory: android
         run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a,armeabi-v7a
+      - run: cp android/app/build/outputs/apk/release/app-release.apk Neve.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Neve-apk
+          path: Neve.apk
+          retention-days: 14
       - name: Publication dans la Release « android »
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/release/app-release.apk Neve.apk
           VERSION=$(node -p "require('./app.json').expo.version")
           NOTES="Névé $VERSION (build $ANDROID_VERSION_CODE, $(date -u +%Y-%m-%d)).
 
           Installation : ouvrir cette page sur le téléphone Android, télécharger Neve.apk, puis autoriser
           l'installation depuis le navigateur si Android le demande. Les mises à jour s'installent par-dessus
           la version précédente (les favoris sont conservés)."
-          if gh release view android >/dev/null 2>&1; then
-            gh release edit android --title "Névé pour Android" --notes "$NOTES"
-          else
-            gh release create android --title "Névé pour Android" --notes "$NOTES" --target "$GITHUB_SHA"
-          fi
-          gh release upload android Neve.apk --clobber
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Neve-apk
-          path: Neve.apk
-          retention-days: 14
+          publish() {
+            if gh release view android >/dev/null 2>&1; then
+              gh release edit android --title "Névé pour Android" --notes "$NOTES"
+            else
+              gh release create android --title "Névé pour Android" --notes "$NOTES" --target "$GITHUB_SHA"
+            fi
+            gh release upload android Neve.apk --clobber
+          }
+          # L'API GitHub renvoie parfois une erreur passagère (HTTP 5xx) : jusqu'à 4 tentatives
+          for i in 1 2 3 4; do
+            if publish; then exit 0; fi
+            echo "Échec de la publication (tentative $i), nouvel essai dans $((i * 20)) s…"
+            sleep $((i * 20))
+          done
+          exit 1
